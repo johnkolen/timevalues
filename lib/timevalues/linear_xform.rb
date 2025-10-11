@@ -8,12 +8,23 @@ module TimeValues
       super **options
       @w = _init(n.reverse, [],  &block)
       @dim = n.dup
+      if @fwd_in && @fwd_in.is_a?(Units)
+        if @dim.last.size < @fwd_in.size
+          raise "Input too large #{@dim.last} < #{uin.size}"
+        end
+      end
+      if @bwd_in && @bwd_in.is_a?(Units)
+        if @dim.first.size < @bwd_in.size
+          raise "Bwd input too large #{@dim.first} < #{uin.size}"
+        end
+      end
     end
 
     def fwd uin=nil, uout=nil
       uin ||= @fwd_in
       uout ||= @fwd_out
-      if @dim[1] < uin.size
+      if uin.object_id != @fwd_in.object_id &&
+         @dim[1] < uin.size
         raise "Input too large #{@dim[1]} < #{uin.size}"
       end
       if uout.size < @dim[0]

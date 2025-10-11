@@ -3,6 +3,7 @@
 require_relative "timevalues/version"
 require_relative "timevalues/time_value"
 require_relative "timevalues/time_value_history"
+require_relative "timevalues/composition_xform"
 require_relative "timevalues/linear_xform"
 require_relative "timevalues/sigmoid_xform"
 require_relative "timevalues/units"
