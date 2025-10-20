@@ -44,6 +44,56 @@ module TimeValues
       @xforms[label] = LinearXform.new(*args, **options, &block)
     end
 
+    def sigmoid label, *args, **options, &block
+      resolve_options options
+      @xforms[label] = SigmoidXform.new(*args, **options, &block)
+    end
+
+    # actions
+    def send_to_xforms mthd, *args, **options, &block
+      @xforms.values.each do |xform|
+        raise "not an xform #{xform}" unless xform.is_a? Xform
+        xform.send mthd, *args, **options, &block
+      end
+    end
+
+    def forward *args, **options, &block
+      send_to_xforms :fwd, *args, **options, &block
+    end
+
+    def backward *args, **options, &block
+      # This one is reversed
+      # send_to_xforms :, *args, **options, &block
+      @xforms.values.reverse.each do |xform|
+        raise "not an xform #{xform}" unless xform.is_a? Xform
+        xform.bwd *args, **options, &block
+      end
+    end
+
+    def gradient *args, **options, &block
+      send_to_xforms :gradient, *args, **options, &block
+    end
+
+    def adjust *args, **options, &block
+      send_to_xforms :adjust, *args, **options, &block
+    end
+
+    def train_start *args, **options, &block
+      send_to_xforms :train_start, *args, **options, &block
+    end
+
+    def batch_start *args, **options, &block
+      send_to_xforms :batch_start, *args, **options, &block
+    end
+
+    def learning_rate= rate
+      send_to_xforms :learning_rate=, rate
+    end
+
+    def momentum_rate= rate
+      send_to_xforms :momentum_rate=, rate
+    end
+
     def _lookup_fwd_units obj
       case obj
       when Symbol

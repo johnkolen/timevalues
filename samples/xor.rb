@@ -1,43 +1,34 @@
-require "timevalues"
+require_relative "../lib/timevalues"
 
-data = {
-  [0, 0] => [0]
-  [0, 1] => [1]
-  [1, 0] => [1]
+$data = {
+  [0, 0] => [0],
+  [0, 1] => [1],
+  [1, 0] => [1],
   [1, 1] => [0]
 }
 
-network = Network.new do
+$network = TimeValues::Network.new do
   units :input, 2
-  units :output, 1
   unitsfb :hidden_sum, 2
   unitsfb :hidden, 2
-  unitsfb :output_sum, 2
+  unitsfb :output_sum, 1
+  unitsfb :output, 1
 
   linear :layer1,
-         fwd_in: :input,
-         fwd_out: :hidden_sum,
-         bwd_in: :hidden_sum
+         in: :input,
+         out: :hidden_sum do |i|
+    puts i
+          i + 1
+        end
   sigmoid :layer1_nl,
-          fwd_in: :hidden_sum,
-          fwd_out: :hidden,
-          bwd_in: :hidden,
-          bwd_out: :hidden_sum
+          in: :hidden_sum,
+          out: :hidden
   linear :layer2,
-         fwd_in: :hidden,
-         fwd_out: :output_sum,
-         bwd_in: :output_sum,
-         bwd_out: :hidden
+         in: :hidden,
+         out: :output_sum do |i|
+          rand() - 0.5
+        end
   sigmoid :layer2_nl,
-          fwd_in: :output_sum,
-          fwd_out: :output,
-          bwd_in: :error,
-          bwd_out: :output_sum
+          in: :output_sum,
+          out: :output
 end
-
-trainer = Trainer.new network: network,
-                      data: data
-
-trainer.iterate(100)
-
-trainer.evaluate(data)

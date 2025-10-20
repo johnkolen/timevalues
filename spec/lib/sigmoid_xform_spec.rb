@@ -39,5 +39,94 @@ module TimeValues
         end
       end
     end
+    context "learning" do
+      before :each do
+        @uin = Units.new(3)
+        @uout = Units.new(3)
+        @ubin = Units.new(3)
+        @ubout = Units.new(3)
+        @sx = SigmoidXform.new fwd_in: @uin,
+                               fwd_out: @uout,
+                               bwd_in: @ubin,
+                               bwd_out: @ubout
+
+      end
+      it 'adjusts' do
+        expect(@sx.bias.to_a).to eq [0, 0, 0]
+        @sx.bias_d = [100, 200, 300]
+        @sx.adjust 2, 0
+        expect(@sx.bias.to_a).to eq [200, 400, 600]
+      end
+      it 'adjusts with momentum' do
+        expect(@sx.bias.to_a).to eq [0, 0, 0]
+        @sx.bias_d = [100, 200, 300]
+        @sx.adjust 2, 10
+        expect(@sx.bias.to_a).to eq [200, 400, 600]
+        expect(@sx.bias_d.to_a).to eq [0, 0, 0]
+        expect(@sx.bias_d1.to_a).to eq [200, 400, 600]
+        @sx.bias_d = [10, 20, 30]
+        @sx.adjust 3, 10
+        expect(@sx.bias.to_a).to eq [2230, 4460, 6690]
+        expect(@sx.bias_d.to_a).to eq [0, 0, 0]
+        expect(@sx.bias_d1.to_a).to eq [2030, 4060, 6090]
+      end
+      it 'computes gradient' do
+        @ubout.set [5, 6, 7]
+        @sx.gradient
+        expect(@sx.bias_d.to_a).to eq [5, 6, 7]
+      end
+      it 'computes scaled gradient' do
+        @ubout.set [5, 6, 7]
+        @sx.gradient 2
+        expect(@sx.bias_d.to_a).to eq [10, 12, 14]
+      end
+      let(:train_set) do
+        {
+          [1, 2, 3] => [0.5, 1.0, 1],
+          [-1, -2, -3] => [0, 0.5, 0]
+        }
+      end
+      it 'single step' do
+        tgts = [0, 0.5, 1]
+        @uin.set [1, 2, 3]
+        @sx.fwd
+        #puts "out: #{@uout.to_a.inspect}"
+        @ubin.set_error tgts, @uout
+        #puts "err: #{@ubin.to_a.inspect}"
+        total_error = @ubin.magnitude
+        #puts @ubin.magnitude
+        @sx.bwd
+        @sx.gradient
+        @sx.adjust 0.1
+        @sx.fwd
+        @ubin.set_error tgts, @uout
+        #puts @ubin.inspect
+        #puts @ubin.magnitude
+        expect(@ubin.magnitude).to be < total_error
+      end
+      it 'multi targets' do
+        last_error = 10.0
+        @sx.train_start
+        10.times do
+          total_error = 0.0
+          @sx.batch_start
+          train_set.each do |input, tgts|
+            @uin.set input
+            @sx.fwd
+            #puts "out: #{@uout.to_a.inspect}"
+            @ubin.set_error tgts, @uout
+            #puts "err: #{@ubin.to_a.inspect}"
+            #puts @ubin.magnitude
+            total_error += @ubin.magnitude
+            @sx.bwd
+            @sx.gradient
+            #puts @sx.bias_d.inspect
+          end
+          expect(total_error).to be < last_error
+          last_error = total_error
+          @sx.adjust 1
+        end
+      end
+    end
   end
 end
