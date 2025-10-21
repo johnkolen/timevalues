@@ -17,8 +17,7 @@ $network = TimeValues::Network.new do
   linear :layer1,
          in: :input,
          out: :hidden_sum do |i|
-    puts i
-          i + 1
+          (i + 1) / 10.0
         end
   sigmoid :layer1_nl,
           in: :hidden_sum,

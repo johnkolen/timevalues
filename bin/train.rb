@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'yaml'
+
 require_relative '../lib/timevalues'
 
 require_relative '../samples/xor'
@@ -21,5 +23,5 @@ trainer = TimeValues::Trainer.new $network,
                                   max_error_limit: 0.45
 
 trainer.train 1000
-
+puts trainer.params.to_yaml
 trainer.evaluate

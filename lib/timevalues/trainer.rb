@@ -2,26 +2,29 @@ module TimeValues
   class Trainer
     attr_accessor :network
     attr_accessor :training_set
-    attr_accessor :max_error_limit
-    attr_accessor :iteration_limit
+    NETWORK_PARAMS = %i(learning_rate momentum_rate)
+    PARAMS = %i(max_error_limit iteration_limit).concat NETWORK_PARAMS
+    PARAMS.each do |p|
+      attr_accessor p
+    end
+
 
     def initialize network, **options, &block
       @network = network
       @training_set = options[:set]
-      %i(max_error_limit iteration_limit).each do |o|
+      PARAMS.each do |o|
         if options[o]
           send "#{o}=", options[o]
         end
       end
-      %i(learning_rate momentum_rate).each do |o|
-        if options[o]
-          @network.send "#{o}=", options[o]
-        end
+      %i(learning_rate momentum_rate).each do |p|
+        @network.send "#{p}=", send(p)
       end
     end
 
     def train iters=nil
       iters ||= @iteration_limit || 10
+      @iteration_limit = iters
       max_err = @max_error_limit || 0.0
       @network.train_start
       @trained_iterations = 0
@@ -65,6 +68,13 @@ module TimeValues
       end
       puts "total error = #{total_error}"
       puts "max error = #{max_error}"
+    end
+
+    def params
+      PARAMS.inject({}) do |h, p|
+        h[p] = send p
+        h
+      end
     end
   end
 end
