@@ -199,5 +199,32 @@ module TimeValues
         end
       end
     end
+    context "serialization" do
+      let(:lx){LinearXform.new(2, 3){|i, j| 10 * i + j}}
+      it 'params' do
+        keys = %w{dim w w_d w_d1 trainable}.sort
+        tkeys = %w{learning_rate momentum_rate}.sort
+        params = lx.params
+        expect(params.keys.sort).to eq keys
+        expect(params["trainable"].keys.sort).to eq tkeys
+        expect(params["dim"]).to eq [2, 3]
+        expect(params["w"]).to eq [[0, 1, 2], [10, 11, 12]]
+        expect(params["w_d"]).to eq [[0, 0, 0], [0, 0, 0]]
+        expect(params["w_d1"]).to eq [[0, 0, 0], [0, 0, 0]]
+      end
+
+      it 'from_h' do
+        params = lx.params
+        params.each do |k, v|
+          params[k] = v.dup
+        end
+        nlx = LinearXform.from_h params
+        expect(nlx.dim).to eq lx.dim
+        expect(nlx.weights).to eq lx.weights
+        expect(nlx.weights_d).to eq lx.weights_d
+        expect(nlx.weights_d1).to eq lx.weights_d1
+      end
+
+    end
   end
 end

@@ -17,8 +17,10 @@ module TimeValues
           send "#{o}=", options[o]
         end
       end
-      %i(learning_rate momentum_rate).each do |p|
-        @network.send "#{p}=", send(p)
+      if @network
+        %i(learning_rate momentum_rate).each do |p|
+          @network.send "#{p}=", send(p)
+        end
       end
     end
 

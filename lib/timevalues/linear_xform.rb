@@ -10,13 +10,17 @@ module TimeValues
     def initialize *n, **options, &block
       super **options
       set_trainable_attributes **options
-      if n.empty?
+      if n.empty? && !options[:from_h]
         n = [options[:fwd_out].size, options[:fwd_in].size]
       end
-      @w = _init(n.reverse, [],  &block)
-      @w_d = _zero @w
-      @w_d1 = _zero @w
-      @dim = n.dup
+      if options[:from_h]
+        from_h options[:from_h]
+      else
+        @w = _init(n.reverse, [],  &block)
+        @w_d = _zero @w
+        @w_d1 = _zero @w
+        @dim = n.dup
+      end
       if @fwd_in && @fwd_in.is_a?(Units)
         if @dim.last.size < @fwd_in.size
           raise "Input too large #{@dim.last} < #{uin.size}"
@@ -44,18 +48,23 @@ module TimeValues
     def weights
       @w
     end
+
     def weights= other
       @w = other
     end
+
     def weights_d
       @w_d
     end
+
     def weights_d= other
       @w_d = other
     end
+
     def weights_d1
       @w_d1
     end
+
     def weights_d1= other
       @w_d1 = other
     end
@@ -83,6 +92,7 @@ module TimeValues
     def bwd uin=nil, uout=nil
       uin ||= @bwd_in
       uout ||= @bwd_out
+      return unless uout
       if @dim[0] < uin.size
         raise "Input too large #{@dim[0]} < #{uin.size} for bwd"
       end
@@ -139,6 +149,29 @@ module TimeValues
       @w = _op(@w, delta){|w, d| w + d}
       @w_d = _zero @w_d
       @w_d1 = delta
+    end
+
+    def params
+      {
+        "dim" => @dim,
+        "w" => @w,
+        "w_d" => @w_d,
+        "w_d1" => @w_d1,
+        "trainable" => trainable_params
+      }
+    end
+
+    def from_h h
+      @dim = h["dim"]
+      @w = h["w"]
+      @w_d = h["w_d"]
+      @w_d1 = h["w_d1"]
+      trainable_from_h h
+      self
+    end
+
+    def self.from_h h
+      new from_h: h
     end
 
     def _zero ary

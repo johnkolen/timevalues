@@ -8,16 +8,22 @@ module TimeValues
     attr_accessor :bias_d1
     include Trainable
 
-    def initialize **options
-      super
+    def initialize *n, **options, &block
+      super **options
       set_trainable_attributes **options
-      if @fwd_in || @in
+      if !n.empty?
+        init_bias n.first, &block
+      elsif @fwd_in || @in
         init_bias (@fwd_in||@in).size
       end
     end
 
-    def init_bias s
-      @bias = Array.new(s){0}
+    def init_bias s, &block
+      if block_given?
+        @bias = Array.new(s, &block)
+      else
+        @bias = Array.new(s){0}
+      end
       train_start
       batch_start
     end
@@ -88,6 +94,29 @@ module TimeValues
         @bias_d[idx] = 0
         @bias_d1[idx] = delta
       end
+    end
+
+    def params
+      {
+        "dim" => @dim,
+        "bias" => @bias,
+        "bias_d" => @bias_d,
+        "bias_d1" => @bias_d1,
+        "trainable" => trainable_params
+      }
+    end
+
+    def from_h h
+      @dim = h["dim"]
+      @bias = h["bias"]
+      @bias_d = h["bias_d"]
+      @bias_d1 = h["bias_d1"]
+      trainable_from_h h
+      self
+    end
+
+    def self.from_h h
+      new from_h: h
     end
   end
 end

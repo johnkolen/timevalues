@@ -128,5 +128,32 @@ module TimeValues
         end
       end
     end
+
+    context "serialization" do
+      let(:sx){SigmoidXform.new(3){|i| i}}
+      it 'params' do
+        keys = %w{dim bias bias_d bias_d1 trainable}.sort
+        tkeys = %w{learning_rate momentum_rate}.sort
+        params = sx.params
+        expect(params.keys.sort).to eq keys
+        expect(params["trainable"].keys.sort).to eq tkeys
+        expect(params["bias"]).to eq [0, 1, 2]
+        expect(params["bias_d"]).to eq [0, 0, 0]
+        expect(params["bias_d1"]).to eq [0, 0, 0]
+      end
+
+      it 'from_h' do
+        params = sx.params
+        params.each do |k, v|
+          params[k] = v.dup
+        end
+        nsx = LinearXform.from_h params
+        expect(nsx.dim).to eq lx.dim
+        expect(nsx.bias).to eq lx.bias
+        expect(nsx.bias_d).to eq lx.bias_d
+        expect(nsx.bias_d1).to eq lx.bias_d1
+      end
+
+    end
   end
 end

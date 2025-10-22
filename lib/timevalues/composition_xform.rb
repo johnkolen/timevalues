@@ -5,6 +5,7 @@ module TimeValues
     def initialize **options, &block
       super
       @units = {}
+      @units_inv = {}
       @xforms = {}
       if block_given?
         instance_eval &block
@@ -19,24 +20,51 @@ module TimeValues
       @xforms
     end
 
+    def _add_units label, ux
+      lbl = @units_inv[ux]
+      case lbl
+      when Array
+        lbl.push label unless lbl.index ux
+      when Units
+        @units_inv[ux] = [lbl, label] unless lbl == label
+      else
+        @units_inv[ux] = label
+      end
+      @units[label] = ux
+    end
+
     def units label, *args, **options, &block
-      @units[label] = Units.new(*args, **options, &block)
+      _add_units label, Units.new(*args, **options, &block)
     end
 
     def unitsfb label, *args, **options, &block
-      @units[_fwd label] = @units[label] = Units.new(*args, **options, &block)
-      @units[_bwd label] = Units.new(*args, **options, &block)
+      _add_units _bwd(label), Units.new(*args, **options, &block)
+      _add_units(_fwd(label),
+                 _add_units(label, Units.new(*args, **options, &block)))
+    end
+
+    def unitsfbs label, *args, **options, &block
+      unitsfb "#{label}_sum", *args, **options, &block
+      unitsfb label, *args, **options, &block
     end
 
     def resolve_options options
       if options[:in].is_a? Symbol
-        options[:fwd_in] = _lookup_fwd_units options[:in]
+        options[:fwd_in] = _lookup_fwd_units(options[:in])
         options[:bwd_out] = _lookup_bwd_units options[:in]
+      else
+        options[:fwd_in] = _lookup_fwd_units(options[:fwd_in])
+        options[:bwd_out] = _lookup_bwd_units options[:bwd_out]
       end
+
+      options[:fwd_in] ||= @last_fwd_out
+      options[:bwd_out] ||= @last_bwd_in
       if options[:out].is_a? Symbol
         options[:fwd_out] = _lookup_fwd_units options[:out]
         options[:bwd_in] = _lookup_bwd_units options[:out]
       end
+      @last_fwd_out = options[:fwd_out]
+      @last_bwd_in = options[:bwd_in]
     end
 
     def linear label, *args, **options, &block
@@ -133,6 +161,43 @@ module TimeValues
           end
         end
       end
+    end
+
+    def units_name ux
+      nm = @units_inv[ux]
+      if nm.is_a? Array
+        nm[0]
+      else
+        nm
+      end
+    end
+
+    def connections
+      w = @units.keys.map{|k| k.size}.max
+      @xforms.inject([]) do |list, (name, xform)|
+        inv = [units_name(xform.fwd_in), units_name(xform.bwd_out)]
+        list << "%#{w}s  |  %#{w}s" % inv
+        list << "#{' ' * (w + 3 - name.size / 2)}#{name}"
+        inv = [units_name(xform.fwd_out), units_name(xform.bwd_in)]
+        list << "%#{w}s  |  %#{w}s" % inv
+        list
+      end.join("\n")
+    end
+
+    def params
+      {
+        "units" => @units.inject({}){|h, (k,u)|h[k]=u.params; h}
+        "xforms" => @xforms.inject({}){|h, (k,u)|h[k]=u.params(self); h}
+      }
+    end
+
+    def from_h h
+      @dim = h["dim"]
+      @bias = h["bias"]
+      @bias_d = h["bias_d"]
+      @bias_d1 = h["bias_d1"]
+      trainable_from_h h
+      self
     end
 
     private

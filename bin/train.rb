@@ -8,18 +8,20 @@ require 'yaml'
 
 require_relative '../lib/timevalues'
 
-options = ActiveSupport::HashWithIndifferentAccess.new(
+#options = ActiveSupport::HashWithIndifferentAccess.new(
+options = {
   learning_rate: 1,
   momentum_rate: 0.0,
   max_error_limit: 0.0,
-  iterations_limit: 100,
+  iteration_limit: 100,
   sample: 'xor'
-)
+}
 
 OptionParser.new do |opts|
   opts.banner = "Usage: train.rb [opts..]"
   opts.on('--learning-rate RATE', "-l RATE",
           "learning rate (#{options[:learning_rate]})") do |str|
+    puts str
     options[:learning_rate] = str.to_f
   end
   opts.on('--momentum-rate RATE', "-m RATE",
@@ -30,15 +32,15 @@ OptionParser.new do |opts|
           "stop when max error falls below LIMIT (#{options[:max_error_limit]})") do |str|
     options[:max_error_limit] = str.to_f
   end
-  opts.on('--iterations_limit LIMIT', '-i LIMIT',
-          "perform at most LIMIT training iteratins (#{options[:iterations_limit]})") do |str|
+  opts.on('--iteration_limit LIMIT', '-i LIMIT',
+          "perform at most LIMIT training iteratins (#{options[:iteration_limit]})") do |str|
     options[:iteration_limit] = str.to_i
   end
   opts.on('--sample NAME', "-s NAME",
           "sample file (#{options[:sample]}) ") do |str|
     options[:sample] = str
   end
-end
+end.parse!
 
 require_relative '../samples/xor'
 
@@ -52,12 +54,12 @@ unless $network
   exit 1
 end
 
+puts options.to_yaml
+
 trainer = TimeValues::Trainer.new $network,
                                   set: $data,
-                                  learning_rate: 4,
-                                  momentum_rate: 0.3,
-                                  max_error_limit: 0.45
+                                  **options
 
-trainer.train 1000
+trainer.train
 puts trainer.params.to_yaml
 trainer.evaluate
