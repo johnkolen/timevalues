@@ -3,22 +3,29 @@ require_relative "trainable"
 
 module TimeValues
   class SigmoidXform < Xform
+    include Trainable
+
+    attr_accessor :dim
     attr_accessor :bias
     attr_accessor :bias_d
     attr_accessor :bias_d1
-    include Trainable
 
     def initialize *n, **options, &block
       super **options
-      set_trainable_attributes **options
-      if !n.empty?
-        init_bias n.first, &block
-      elsif @fwd_in || @in
-        init_bias (@fwd_in||@in).size
+      if options[:from_h]
+        from_h options[:from_h]
+      else
+        set_trainable_attributes **options
+        if !n.empty?
+          init_bias n.first, &block
+        elsif @fwd_in || @in
+          init_bias (@fwd_in || @in).size
+        end
       end
     end
 
     def init_bias s, &block
+      @dim = s
       if block_given?
         @bias = Array.new(s, &block)
       else
@@ -26,6 +33,28 @@ module TimeValues
       end
       train_start
       batch_start
+    end
+
+    def _dup
+      @dim = @dim.dup
+      @bias = @bias.dup
+      @bias_d = @bias_d.dup
+      @bias_d1 = @bias_d1.dup
+      @fwd_in = @fwd_in.dup
+      @fwd_out = @fwd_out.dup
+      @bwd_in = @bwd_in.dup
+      @bwd_out = @bwd_out.dup
+      @in = @in.dup
+      @out = @out.dup
+      self
+    end
+
+    def == other
+      other.class == self.class &&
+        @dim == other.dim &&
+        @bias == other.bias &&
+        @bias_d == other.bias_d &&
+        @bias_d1 == other.bias_d1
     end
 
     def fwd uin=nil, uout=nil
@@ -96,22 +125,36 @@ module TimeValues
       end
     end
 
-    def params
-      {
+    def params iosrc=nil
+      rv = {
         "dim" => @dim,
         "bias" => @bias,
         "bias_d" => @bias_d,
         "bias_d1" => @bias_d1,
         "trainable" => trainable_params
       }
+      if iosrc
+        %i{fwd_in fwd_out bwd_in bwd_out}.each do |io|
+          u = send io
+          next unless u
+          label = iosrc.units_name u
+          rv[io.to_s] = label if label
+        end
+      end
+      rv
     end
 
-    def from_h h
+    def from_h h, iosrc=nil
       @dim = h["dim"]
       @bias = h["bias"]
       @bias_d = h["bias_d"]
       @bias_d1 = h["bias_d1"]
-      trainable_from_h h
+      trainable_from_h  h["trainable"]
+      if iosrc
+        %i{fwd_in fwd_out bwd_in bwd_out}.each do |io|
+          send "#{io}=", iosrc.units(io.to_sym)
+        end
+      end
       self
     end
 

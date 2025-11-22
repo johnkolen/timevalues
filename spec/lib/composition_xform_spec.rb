@@ -69,5 +69,78 @@ module TimeValues
         expect(x.bwd_out).to be @c.get_units[:layer1_bwd]
       end
     end
+    def xor
+      CompositionXform.new do
+        units :input, 2
+          unitsfbs :hidden, 2
+          unitsfbs :output, 1
+
+          linear :layer1_l,
+                 fwd_in: :input,
+                 out: :hidden_sum do |i|
+            i + 1
+          end
+          sigmoid :layer1,
+                  out: :hidden
+          linear :layer2_l,
+                 out: :output_sum do |i|
+            2 * i
+          end
+          sigmoid :layer2,
+                  out: :output
+        end
+    end
+    context "serialization" do
+      let(:cx) {xor}
+      it 'params' do
+        keys = %w{units xforms}.sort
+        params = cx.params
+        expect(params.keys.sort).to eq keys
+      end
+      it 'from_h' do
+        params = cx.params
+        params.each do |k, v|
+          params[k] = v.dup
+        end
+        ncx = CompositionXform.from_h params
+        expect(ncx.get_units.keys).to eq cx.get_units.keys
+        dims = cx.get_units.values.map(&:dim)
+        expect(ncx.get_units.values.map(&:dim)).to eq dims
+        values = cx.get_units.values.map(&:values)
+        expect(ncx.get_units.values.map(&:values)).to eq values
+        cxf = cx.get_xforms
+        ncxf = ncx.get_xforms
+        expect(ncxf.size).to eq cxf.size
+        ncxf.each do |label, xf|
+          expect(cxf).to have_key label
+          oxf = cxf[label]
+          expect(xf.params).to eq(oxf.params),"xform #{label}"
+        end
+      end
+    end
+    context "equals" do
+      let(:cx) {xor}
+      it "self" do
+        expect(cx == cx).to be true
+      end
+      it "self dup" do
+        other = cx.dup
+        expect(cx == other).to be true
+      end
+      it "same build" do
+        other = xor
+        expect(cx == other).to be true
+      end
+      it "self dup diff" do
+        other = cx.dup
+        other.units "junk", 4
+        expect(cx == other).to be false
+      end
+      it "diff build" do
+        other = xor
+        other.units "junk", 4
+        expect(cx == other).to be false
+      end
+    end
   end
 end

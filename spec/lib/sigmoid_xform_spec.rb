@@ -147,13 +147,35 @@ module TimeValues
         params.each do |k, v|
           params[k] = v.dup
         end
-        nsx = LinearXform.from_h params
-        expect(nsx.dim).to eq lx.dim
-        expect(nsx.bias).to eq lx.bias
-        expect(nsx.bias_d).to eq lx.bias_d
-        expect(nsx.bias_d1).to eq lx.bias_d1
+        nsx = SigmoidXform.from_h params
+        expect(nsx.dim).to eq sx.dim
+        expect(nsx.bias).to eq sx.bias
+        expect(nsx.bias_d).to eq sx.bias_d
+        expect(nsx.bias_d1).to eq sx.bias_d1
       end
 
+    end
+    context "equals" do
+      let(:sx){SigmoidXform.new(3){|i| i}}
+      it "self" do
+        expect(sx == sx).to be true
+      end
+      it "self dup" do
+        expect(sx == sx.dup).to be true
+      end
+      it "same build" do
+        other = SigmoidXform.new(3){|i| i}
+        expect(sx == other).to be true
+      end
+      it "self dup diff" do
+        other = sx.dup
+        sx.bias[0] = 9
+        expect(sx == other).to be false
+      end
+      it "diff build" do
+        other = SigmoidXform.new(3){|i| i + 1}
+        expect(sx == other).to be false
+      end
     end
   end
 end

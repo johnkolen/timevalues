@@ -15,5 +15,27 @@ module TimeValues
         end
       end
     end
+    context "equals" do
+      let(:ux){Units.new(3){|i| i}}
+      it "self" do
+        expect(ux == ux).to be true
+      end
+      it "self dup" do
+        expect(ux == ux.dup).to be true
+      end
+      it "same build" do
+        other = Units.new(3){|i| i}
+        expect(ux == other).to be true
+      end
+      it "self dup diff" do
+        other = ux.dup
+        other.values[0] = 9
+        expect(ux == other).to be false
+      end
+      it "diff build" do
+        other = Units.new(3){|i| i + 1}
+        expect(ux == other).to be false
+      end
+    end
   end
 end

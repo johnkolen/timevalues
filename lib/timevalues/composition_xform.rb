@@ -7,8 +7,12 @@ module TimeValues
       @units = {}
       @units_inv = {}
       @xforms = {}
-      if block_given?
-        instance_eval &block
+      if options[:from_h]
+        from_h options[:from_h]
+      else
+        if block_given?
+          instance_eval &block
+        end
       end
     end
 
@@ -16,11 +20,15 @@ module TimeValues
       @units
     end
 
+    def get_units_inv
+      @units_inv
+    end
+
     def get_xforms
       @xforms
     end
 
-    def _add_units label, ux
+    def _add_units_inv label, ux
       lbl = @units_inv[ux]
       case lbl
       when Array
@@ -30,6 +38,10 @@ module TimeValues
       else
         @units_inv[ux] = label
       end
+    end
+
+    def _add_units label, ux
+      _add_units_inv label, ux
       @units[label] = ux
     end
 
@@ -186,18 +198,40 @@ module TimeValues
 
     def params
       {
-        "units" => @units.inject({}){|h, (k,u)|h[k]=u.params; h}
-        "xforms" => @xforms.inject({}){|h, (k,u)|h[k]=u.params(self); h}
+        "units" => @units.inject({}){|h, (k,u)|h[k]=u.params; h},
+        "xforms" =>
+        @xforms.inject({}){|h, (k,u)|h[k]=[u.class.to_s, u.params(self)]; h}
       }
     end
 
     def from_h h
-      @dim = h["dim"]
-      @bias = h["bias"]
-      @bias_d = h["bias_d"]
-      @bias_d1 = h["bias_d1"]
-      trainable_from_h h
+      h["units"].each do |label, u|
+        _add_units label, Units.from_h(u)
+      end
+      h["xforms"].each do |label, (klass, xf)|
+        @xforms[label] = Object.const_get(klass).from_h(xf)
+      end
       self
+    end
+
+    def self.from_h h
+      new from_h: h
+    end
+
+    def _dup
+      @units = @units.deep_dup
+      @units_inv = {}
+      @units.each do |h, (label, ux)|
+        _add_units_inv label, ux
+      end
+      @xforms = @xforms.deep_dup
+      self
+    end
+
+    def == other
+      other.class == self.class &&
+        @units == other.get_units &&
+        @xforms == other.get_xforms
     end
 
     private

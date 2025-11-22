@@ -74,5 +74,41 @@ module TimeValues
         end
       end
     end
+    def xor
+        Network.new do
+          units :input, 2
+          unitsfbs :hidden, 2
+          unitsfbs :output, 1
+
+          linear :layer1_l,
+                 fwd_in: :input,
+                 out: :hidden_sum do |i|
+            i + 1.3
+          end
+          sigmoid :layer1,
+                  out: :hidden
+          linear :layer2_l,
+                 out: :output_sum do |i|
+            2 * i + 0.5
+          end
+          sigmoid :layer2,
+                  out: :output
+        end
+    end
+    context "serialization" do
+      let(:nx) { xor }
+
+      it 'saves' do
+        filename = 'spec/data/save_network.ts'
+        nx.save filename
+        data = File.binread(filename)
+        #expect(data.bytesize).to be_within(3).of 343
+        rnx = Network.restore filename
+        expect(rnx).to eq nx
+      end
+      it 'restores' do
+        rnx = Network.restore 'spec/data/network.ts'
+      end
+    end
   end
 end

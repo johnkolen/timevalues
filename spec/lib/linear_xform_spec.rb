@@ -226,5 +226,27 @@ module TimeValues
       end
 
     end
+    context "equals" do
+      let(:lx){LinearXform.new(2, 3){|i, j| 10 * i + j}}
+      it "self" do
+        expect(lx == lx).to be true
+      end
+      it "self dup" do
+        expect(lx == lx.dup).to be true
+      end
+      it "same build" do
+        other = LinearXform.new(2, 3){|i, j| 10 * i + j }
+        expect(lx == other).to be true
+      end
+      it "self dup diff" do
+        other = lx.dup
+        other.weights[0][0] = 9
+        expect(lx == other).to be false
+      end
+      it "diff build" do
+        other = LinearXform.new(2, 3){|i, j| 10 * i + j + 1}
+        expect(lx == other).to be false
+      end
+    end
   end
 end

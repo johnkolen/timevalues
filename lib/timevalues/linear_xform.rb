@@ -5,7 +5,7 @@ module TimeValues
   class LinearXform < Xform
     include Trainable
 
-    attr_reader :dim
+    attr_accessor :dim
 
     def initialize *n, **options, &block
       super **options
@@ -112,6 +112,22 @@ module TimeValues
       @w[idx]
     end
 
+    def _dup
+      @dim = @dim.dup
+      @w = @w.deep_dup
+      @w_d = @w_d.deep_dup
+      @w_d1 = @w_d1.deep_dup
+      self
+    end
+
+    def == other
+      other.class == self.class &&
+        @dim == other.dim &&
+        @w == other.weights &&
+        @w_d == other.weights_d &&
+        @w_d1 == other.weights_d1
+    end
+
     def _init dim, idx=[], &block
       if dim.size == 1
         if block_given?
@@ -151,22 +167,36 @@ module TimeValues
       @w_d1 = delta
     end
 
-    def params
-      {
+    def params iosrc=nil
+      rv = {
         "dim" => @dim,
         "w" => @w,
         "w_d" => @w_d,
         "w_d1" => @w_d1,
         "trainable" => trainable_params
       }
+      if iosrc
+        %i{fwd_in fwd_out bwd_in bwd_out}.each do |io|
+          u = send io
+          next unless u
+          label = iosrc.units_name u
+          rv[io.to_s] = label if label
+        end
+      end
+      rv
     end
 
-    def from_h h
+    def from_h h, iosrc=nil
       @dim = h["dim"]
       @w = h["w"]
       @w_d = h["w_d"]
       @w_d1 = h["w_d1"]
-      trainable_from_h h
+      trainable_from_h h["trainable"]
+      if iosrc
+        %i{fwd_in fwd_out bwd_in bwd_out}.each do |io|
+          send "#{io}=", iosrc.units(io.to_sym)
+        end
+      end
       self
     end
 
